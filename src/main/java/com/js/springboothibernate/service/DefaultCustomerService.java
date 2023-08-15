@@ -1,20 +1,27 @@
 package com.js.springboothibernate.service;
 
+import com.js.springboothibernate.commons.I18Constants;
 import com.js.springboothibernate.data.Customer;
 import com.js.springboothibernate.dto.CustomerData;
+import com.js.springboothibernate.exception.NoSuchElementFoundException;
 import com.js.springboothibernate.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service("customerService")
+@AllArgsConstructor
 public class DefaultCustomerService implements CustomerService{
 
     @Autowired
     private CustomerRepository customerRepository;
+    private final MessageSource messageSource;
 
     /**
      * Create a customer based on the data sent to the service class.
@@ -34,6 +41,7 @@ public class DefaultCustomerService implements CustomerService{
      */
     @Override
     public boolean deleteCustomer(Long customerId) {
+        getCustomerById(customerId); // validates customerId is present in the database.
         customerRepository.deleteById(customerId);
         return true;
     }
@@ -59,7 +67,7 @@ public class DefaultCustomerService implements CustomerService{
      */
     @Override
     public CustomerData getCustomerById(Long customerId) {
-        return populateCustomerData( customerRepository.findById(customerId).orElseThrow(() -> new EntityNotFoundException("Customer not found.")));
+        return populateCustomerData( customerRepository.findById(customerId).orElseThrow(() -> new NoSuchElementFoundException(getLocalMessage(I18Constants.NO_ITEM_FOUND.getKey(), String.valueOf(customerId)))));
     }
 
     /**
@@ -87,5 +95,15 @@ public class DefaultCustomerService implements CustomerService{
         customer.setLastName(customerData.getLastName());
         customer.setEmail(customerData.getEmail());
         return customer;
+    }
+
+    /**
+     * Utility to resolve a message with support for parameterization and internationalization.
+     * @param key
+     * @param params
+     * @return
+     */
+    private String getLocalMessage(String key, String... params) {
+        return messageSource.getMessage(key, params, Locale.ENGLISH);
     }
 }
